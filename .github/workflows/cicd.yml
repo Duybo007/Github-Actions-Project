@@ -121,6 +121,32 @@ jobs:
       with:
         context: .
         push: true
-        tags: duybo95/bankapp:latest
+        tags: |
+          duybo95/bankapp:latest
+          duybo95/bankapp:${{ github.run_number }}
         file: ./Dockerfile
 
+  update_docker_image_tag:
+    runs-on: self-hosted
+    needs: build_docker_image_and_push
+    
+    steps:
+      - name: Checkout deployment repo
+        uses: actions/checkout@v4
+        with:
+          repository: Duybo007/gitops-github-action-project
+          token: ${{ secrets.DEPLOYMENT_REPO_TOKEN }} 
+          path: deployment-repo
+      
+      - name: Update deployment.yaml image tag
+        run: |
+          sed -i "s|image: duybo95/bankapp:.*|image: duybo95/bankapp:${{ github.run_number }}|" deployment-repo/deployment.yaml
+      
+      - name: Commit and push update
+        run: |
+          cd deployment-repo
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add deployment.yaml
+          git commit -m "Update image tag to ${{ github.run_number }}"
+          git push
